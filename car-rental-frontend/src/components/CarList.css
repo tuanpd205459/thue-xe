@@ -1,0 +1,26 @@
+.car-list {
+    margin: 20px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.car-list h2 {
+    color: #333;
+}
+
+.car-list ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+.car-list li {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+.car-list li h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #007BFF;
+}
