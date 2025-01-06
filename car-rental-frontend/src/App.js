@@ -1,43 +1,171 @@
 import React, { useEffect, useState } from "react";
-import { fetchCars, fetchStations } from "./services/carService";
-import LoginComponent from "./components/LoginComponent";
-import CarListComponent from "./components/CarListComponent";
-import StationListComponent from "./components/StationListComponent";
+import axios from "axios";
 import MapComponent from "./components/MapComponent";
 
 function App() {
   const [cars, setCars] = useState([]);
-  const [stations, setStations] = useState([]);
   const [selectedCar, setSelectedCar] = useState(null);
-  const [loggedInUser, setLoggedInUser] = useState(null);
+  const [borrowedCar, setBorrowedCar] = useState(null);
   const [message, setMessage] = useState("");
+  const [username, setUsername] = useState(""); // Thêm state cho đăng nhập
+  const [password, setPassword] = useState("");
+  const [loggedInUser, setLoggedInUser] = useState(null); // Thông tin người dùng đã đăng nhập
+  const [stations, setStations] = useState([]);
 
+  // Fetch cars and borrowed car on mount
   useEffect(() => {
-    fetchCars()
+    axios
+      .get("http://localhost:5001/api/cars/cars")
       .then((response) => setCars(response.data))
-      .catch(console.error);
+      .catch((error) => console.error("Error fetching cars:", error));
 
-    fetchStations()
+    axios
+      .get("http://localhost:5001/api/rentals/rent")
+      .then((response) => setBorrowedCar(response.data))
+      .catch((error) => console.error("Error fetching borrowed car:", error));
+    axios
+      .get("http://localhost:5001/api/cars/getStations")
       .then((response) => setStations(response.data))
-      .catch(console.error);
+      .catch((error) => console.error("Error fetching cars:", error));
   }, []);
 
-  const handleCarSelect = (car) => setSelectedCar(car);
+  // Handle login
+  const handleLogin = async () => {
+    try {
+      const response = await axios.post("http://localhost:5001/api/users/login", {
+        username,
+        password,
+      });
 
+      const { token, userId } = response.data;
+
+      // Lưu token vào localStorage
+      localStorage.setItem("token", token);
+      localStorage.setItem("userId", userId);
+
+      setLoggedInUser({ username }); // Lưu thông tin người dùng
+      setMessage("Đăng nhập thành công!");
+    } catch (error) {
+      setMessage(error.response?.data?.message || "Đăng nhập thất bại.");
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("userId");
+    setLoggedInUser(null);
+    setMessage("Đã đăng xuất.");
+  };
+
+  // Handle borrowing a car
+  const handleBorrowCar = async () => {
+    try {
+      // Kiểm tra xem đã chọn xe chưa
+      if (!selectedCar) {
+        setMessage("Bạn chưa chọn xe.");
+        console.log("Selected Car:", selectedCar._id);  // Kiểm tra giá trị của selectedCar
+        return;
+      }
+      if (!selectedCar._id) {
+        setMessage("ID của xe không hợp lệ.");
+        console.log("Selected Car ID:", selectedCar._id);
+        return;
+      }
+  
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setMessage("Bạn cần đăng nhập để mượn xe.");
+        return;
+      }
+  
+      const currentTime = new Date().toISOString(); // Lấy thời gian hiện tại
+      const response = await axios.post(
+        "http://localhost:5001/api/rentals/rent",
+        {
+          carId: selectedCar._id, 
+          rentalStart: currentTime,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`, // Gửi token trong header
+          },
+        }
+      );
+  
+      setMessage(response.data.message);
+      setBorrowedCar({
+        selectedCar,
+        rentalStart: currentTime, // Gán thời gian mượn xe
+      });
+  
+      // Cập nhật trạng thái của xe trong danh sách
+      setCars((prevCars) =>
+        prevCars.map((car) =>
+          car._id === selectedCar._id
+            ? { ...car, available: false, borrowTime: currentTime } // Cập nhật thông tin xe đã mượn
+            : car
+        )
+      );
+    } catch (error) {
+      setMessage(error.response?.data?.message || "Lỗi khi mượn xe.");
+    }
+  };
+  
+  // Xử lý sự kiện khi chọn xe
+  const handleCarSelect = (car) => {
+    setSelectedCar(car); // Cập nhật selectedCar khi chọn
+    console.log("Car selected:", car); // Kiểm tra toàn bộ object xe
+    console.log("Selected Car ID:", car._id); // Hiển thị ID của xe
+    console.log("thoi gian muon:", car.borrowTime);
+  };
+
+  //trả xe
+
+  const handleReturnCar = async () => {
+    try {
+      const rentalEnd = new Date().toISOString(); // Lấy thời gian hiện tại theo ISO 8601
+      const carId = selectedCar._id; // Lấy carId từ borrowedCar
+  
+      console.log("Returning car with Car ID:", carId);
+      console.log("Rental End Time:", rentalEnd); // Thời gian trả xe
+  
+      const response = await axios.post(
+        "http://localhost:5001/api/rentals/return",
+        { 
+          carId: carId, // Gửi carId 
+          rentalEnd: rentalEnd, // Gửi thêm thời gian trả
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`, // Lấy token từ localStorage
+          },
+        }
+      );
+    // Lấy dữ liệu từ response
+    const { rental } = response.data; // Truy cập rental object
+    const { totalPrice, rentalEnd: returnedTime } = rental;
+   console.log("Response from return car API:", response.data);
+  // Hiển thị thông báo
+  setMessage(
+    `Xe đã trả thành công vào lúc: ${new Date(returnedTime).toLocaleString()}. Tiền mượn: ${totalPrice.toLocaleString()} VND`
+  );
+      setBorrowedCar(null); // Cập nhật lại trạng thái của borrowedCar
+      setCars((prevCars) =>
+    prevCars.map((car) =>
+    car._id === selectedCar._id
+      ? { ...car, available: true, borrowTime: null }
+      : car
+  )
+);
+
+    } catch (error) {
+      console.error("Error while returning car:", error);
+      setMessage(error.response?.data?.message || "Lỗi khi trả xe.");
+    }
+  };
+  
+  
   return (
-<<<<<<< HEAD
-    <div>
-      <LoginComponent setLoggedInUser={setLoggedInUser} setMessage={setMessage} />
-      <MapComponent cars={cars} selectedCar={selectedCar} stations={stations} />
-      <CarListComponent
-        cars={cars}
-        selectedCar={selectedCar}
-        loggedInUser={loggedInUser}
-        handleCarSelect={handleCarSelect}
-        message={message}
-      />
-      <StationListComponent stations={stations} />
-=======
     <div style={{ display: "flex", height: "100vh", width: "100vw" }}>
       {/* Góc trên bên phải: Đăng nhập hoặc thông tin người dùng */}
       <div
@@ -135,7 +263,7 @@ function App() {
                     Đã mượn lúc:{" "}
                     {car.borrowTime
                       ? new Date(car.borrowTime).toLocaleString()
-                      : "Không rõ thời gian"}
+                      : "---"}
                   </p>
                   {car.borrowedBy === loggedInUser?.id && (
                     <button onClick={handleReturnCar}>Trả Xe</button>
@@ -185,9 +313,9 @@ function App() {
           ))}
         </div>
       </div>
->>>>>>> parent of 774a4b51 (Thêm chức năng mượn/trả xe bằng RFID)
     </div>
   );
+  
 }
 
 export default App;
