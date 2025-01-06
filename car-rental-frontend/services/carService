@@ -1,0 +1,4 @@
+import axios from "axios";
+
+export const fetchCars = () => axios.get("http://localhost:5001/api/cars/cars");
+export const fetchStations = () => axios.get("http://localhost:5001/api/cars/getStations");

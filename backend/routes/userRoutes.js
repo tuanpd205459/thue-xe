@@ -13,6 +13,6 @@ router.post('/login', userController.loginUser);
 router.get('/me', userController.authenticateUser, userController.getCurrentUser);
 
 //xác thực người dùng qua RFID
-router.post('/rfid', rfid.authenticateUserByRFID);
+router.post('/rfid/:rfid', rfid.authenticateUserByRFID);
 
 module.exports = router;
