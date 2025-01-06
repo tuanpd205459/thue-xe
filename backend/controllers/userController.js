@@ -4,36 +4,27 @@ const jwt = require('jsonwebtoken');
 
 // Đăng ký người dùng
 exports.registerUser = async (req, res) => {
-  const { username, password, email, rfid } = req.body;
+  const { username, password, email } = req.body;
 
   try {
-    // Kiểm tra xem dữ liệu có đầy đủ không
-    if (!username || !password || !email || !rfid) {
-      return res.status(400).json({ message: 'All fields are required' });
-    }
-
-    // Kiểm tra nếu người dùng đã tồn tại (kiểm tra username, email hoặc rfid)
-    const existingUser = await User.findOne({ $or: [{ username }, { email }, { rfid }] });
+    // Kiểm tra nếu người dùng đã tồn tại
+    const existingUser = await User.findOne({ $or: [{ username }, { email }] });
     if (existingUser) {
-      return res.status(400).json({ message: 'Username, email, or RFID already exists' });
+      return res.status(400).json({ message: 'Username or email already exists' });
     }
 
     // Mã hóa mật khẩu
-    const salt = await bcrypt.genSalt(10);  // Tạo salt
-    const hashedPassword = await bcrypt.hash(password, salt);  // Mã hóa mật khẩu với salt
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Tạo người dùng mới với cả RFID
-    const newUser = new User({ username, password: hashedPassword, email, rfid });
+    // Tạo người dùng mới
+    const newUser = new User({ username, password: hashedPassword, email });
     await newUser.save();
 
     res.status(201).json({ message: 'User registered successfully' });
   } catch (err) {
-    console.error('Error registering user:', err);  // Log lỗi để debug
     res.status(500).json({ message: 'Error registering user', error: err.message });
   }
 };
-
-
 
 
 // Đăng nhập người dùng

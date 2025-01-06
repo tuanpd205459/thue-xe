@@ -12,9 +12,9 @@ router.get('/getStations', carController.getStations);
 router.post('/addcars', carController.addCar);
 
 // Cập nhật tọa độ xe
-router.put('/location', carController.updateLocation);
+router.put('/cars/location', carController.updateLocation);
 
 // Mở/Khóa xe
-router.put('/lock', carController.toggleLock);
+router.put('/cars/lock', carController.toggleLock);
 
 module.exports = router;
