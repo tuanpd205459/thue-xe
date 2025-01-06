@@ -263,7 +263,7 @@ function App() {
                     Đã mượn lúc:{" "}
                     {car.borrowTime
                       ? new Date(car.borrowTime).toLocaleString()
-                      : "Không rõ thời gian"}
+                      : "---"}
                   </p>
                   {car.borrowedBy === loggedInUser?.id && (
                     <button onClick={handleReturnCar}>Trả Xe</button>
