@@ -115,21 +115,40 @@ function App() {
              Phan Đình Tuấn - 20242239M - Project IOT
           </div>
           {!loggedInUser ? (
-            <Form className="mb-4" style={{  width: "250px", margin: "0 auto", border: "2px solid #000", borderRadius: "8px", padding: "20px"  }}> {/* Giảm kích thước ô đăng nhập */}
-              <Form.Group controlId="username" className="mb-3">
-                <Form.Control type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="Username" />
-              </Form.Group>
-              <Form.Group controlId="password" className="mb-3">
-                <Form.Control type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" />
-              </Form.Group>
-              <Button onClick={handleLogin} variant="primary">Login</Button>
-            </Form>
-          ) : (
-            <div className="mb-4">
-              <h2 style={{ fontSize: "16px" }}>Welcome, {loggedInUser.username}</h2>
-              <Button onClick={handleLogout} variant="secondary">Logout</Button>
-            </div>
-          )}
+          <Form className="mb-4" style={{ 
+            width: "250px", /* Giảm chiều rộng */
+            margin: "0 auto", 
+            border: "2px solid #000", 
+            borderRadius: "8px", 
+            padding: "15px", /* Giảm padding */
+            fontSize: "14px"  /* Giảm kích thước font trong ô đăng nhập */
+          }}>
+            <Form.Group controlId="username" className="mb-3">
+              <Form.Control 
+                type="text" 
+                value={username} 
+                onChange={e => setUsername(e.target.value)} 
+                placeholder="Username" 
+                style={{ fontSize: "14px" }} /* Giảm font-size trong ô nhập */
+              />
+            </Form.Group>
+            <Form.Group controlId="password" className="mb-3">
+              <Form.Control 
+                type="password" 
+                value={password} 
+                onChange={e => setPassword(e.target.value)} 
+                placeholder="Password" 
+                style={{ fontSize: "14px" }} /* Giảm font-size trong ô nhập */
+              />
+            </Form.Group>
+            <Button onClick={handleLogin} variant="primary" style={{ fontSize: "14px" }}>Login</Button> {/* Giảm font-size của nút */}
+          </Form>
+        ) : (
+          <div className="mb-4">
+            <h2 style={{ fontSize: "16px" }}>Welcome, {loggedInUser.username}</h2>
+            <Button onClick={handleLogout} variant="secondary" style={{ fontSize: "14px" }}>Logout</Button> {/* Giảm font-size của nút logout */}
+          </div>
+        )}
   
           {message && <Alert variant="info">{message}</Alert>}
   
