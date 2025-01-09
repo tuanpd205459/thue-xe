@@ -1,49 +1,40 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { Container, Row, Col, Button, Form, Card, Alert } from "react-bootstrap";
 import MapComponent from "./components/MapComponent";
+import 'bootstrap/dist/css/bootstrap.min.css';
 
 function App() {
   const [cars, setCars] = useState([]);
   const [selectedCar, setSelectedCar] = useState(null);
   const [borrowedCar, setBorrowedCar] = useState(null);
   const [message, setMessage] = useState("");
-  const [username, setUsername] = useState(""); // Thêm state cho đăng nhập
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [loggedInUser, setLoggedInUser] = useState(null); // Thông tin người dùng đã đăng nhập
+  const [loggedInUser, setLoggedInUser] = useState(null);
   const [stations, setStations] = useState([]);
 
-  // Fetch cars and borrowed car on mount
   useEffect(() => {
-    axios
-      .get("http://localhost:5001/api/cars/cars")
-      .then((response) => setCars(response.data))
-      .catch((error) => console.error("Error fetching cars:", error));
+    axios.get("http://localhost:5001/api/cars/cars")
+      .then(response => setCars(response.data))
+      .catch(error => console.error("Error fetching cars:", error));
 
-    axios
-      .get("http://localhost:5001/api/rentals/rent")
-      .then((response) => setBorrowedCar(response.data))
-      .catch((error) => console.error("Error fetching borrowed car:", error));
-    axios
-      .get("http://localhost:5001/api/cars/getStations")
-      .then((response) => setStations(response.data))
-      .catch((error) => console.error("Error fetching cars:", error));
+    axios.get("http://localhost:5001/api/rentals/rent")
+      .then(response => setBorrowedCar(response.data))
+      .catch(error => console.error("Error fetching borrowed car:", error));
+
+    axios.get("http://localhost:5001/api/cars/getStations")
+      .then(response => setStations(response.data))
+      .catch(error => console.error("Error fetching stations:", error));
   }, []);
 
-  // Handle login
   const handleLogin = async () => {
     try {
-      const response = await axios.post("http://localhost:5001/api/users/login", {
-        username,
-        password,
-      });
-
+      const response = await axios.post("http://localhost:5001/api/users/login", { username, password });
       const { token, userId } = response.data;
-
-      // Lưu token vào localStorage
       localStorage.setItem("token", token);
       localStorage.setItem("userId", userId);
-
-      setLoggedInUser({ username }); // Lưu thông tin người dùng
+      setLoggedInUser({ username });
       setMessage("Đăng nhập thành công!");
     } catch (error) {
       setMessage(error.response?.data?.message || "Đăng nhập thất bại.");
@@ -57,265 +48,159 @@ function App() {
     setMessage("Đã đăng xuất.");
   };
 
-  // Handle borrowing a car
   const handleBorrowCar = async () => {
+    if (!selectedCar) {
+      setMessage("Bạn chưa chọn xe.");
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setMessage("Bạn cần đăng nhập để mượn xe.");
+      return;
+    }
+
     try {
-      // Kiểm tra xem đã chọn xe chưa
-      if (!selectedCar) {
-        setMessage("Bạn chưa chọn xe.");
-        console.log("Selected Car:", selectedCar._id);  // Kiểm tra giá trị của selectedCar
-        return;
-      }
-      if (!selectedCar._id) {
-        setMessage("ID của xe không hợp lệ.");
-        console.log("Selected Car ID:", selectedCar._id);
-        return;
-      }
-  
-      const token = localStorage.getItem("token");
-      if (!token) {
-        setMessage("Bạn cần đăng nhập để mượn xe.");
-        return;
-      }
-  
-      const currentTime = new Date().toISOString(); // Lấy thời gian hiện tại
+      const currentTime = new Date().toISOString();
       const response = await axios.post(
         "http://localhost:5001/api/rentals/rent",
-        {
-          carId: selectedCar._id, 
-          rentalStart: currentTime,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`, // Gửi token trong header
-          },
-        }
+        { carId: selectedCar._id, rentalStart: currentTime },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-  
+      
       setMessage(response.data.message);
-      setBorrowedCar({
-        selectedCar,
-        rentalStart: currentTime, // Gán thời gian mượn xe
-      });
-  
-      // Cập nhật trạng thái của xe trong danh sách
-      setCars((prevCars) =>
-        prevCars.map((car) =>
-          car._id === selectedCar._id
-            ? { ...car, available: false, borrowTime: currentTime } // Cập nhật thông tin xe đã mượn
-            : car
-        )
-      );
+      setBorrowedCar({ selectedCar, rentalStart: currentTime });
+      setCars(cars.map(car => car._id === selectedCar._id ? { ...car, available: false, borrowTime: currentTime } : car));
+      setMessage(`Đã mượn xe thành công vào lúc: ${new Date(currentTime).toLocaleString()}`);
     } catch (error) {
       setMessage(error.response?.data?.message || "Lỗi khi mượn xe.");
     }
   };
-  
-  // Xử lý sự kiện khi chọn xe
-  const handleCarSelect = (car) => {
-    setSelectedCar(car); // Cập nhật selectedCar khi chọn
-    console.log("Car selected:", car); // Kiểm tra toàn bộ object xe
-    console.log("Selected Car ID:", car._id); // Hiển thị ID của xe
-    console.log("thoi gian muon:", car.borrowTime);
-  };
-
-  //trả xe
 
   const handleReturnCar = async () => {
+    if (!selectedCar) return;
+
     try {
-      const rentalEnd = new Date().toISOString(); // Lấy thời gian hiện tại theo ISO 8601
-      const carId = selectedCar._id; // Lấy carId từ borrowedCar
-  
-      console.log("Returning car with Car ID:", carId);
-      console.log("Rental End Time:", rentalEnd); // Thời gian trả xe
-  
+      const rentalEnd = new Date().toISOString();
       const response = await axios.post(
         "http://localhost:5001/api/rentals/return",
-        { 
-          carId: carId, // Gửi carId 
-          rentalEnd: rentalEnd, // Gửi thêm thời gian trả
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`, // Lấy token từ localStorage
-          },
-        }
+        { carId: selectedCar._id, rentalEnd },
+        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );
-    // Lấy dữ liệu từ response
-    const { rental } = response.data; // Truy cập rental object
-    const { totalPrice, rentalEnd: returnedTime } = rental;
-   console.log("Response from return car API:", response.data);
-  // Hiển thị thông báo
-  setMessage(
-    `Xe đã trả thành công vào lúc: ${new Date(returnedTime).toLocaleString()}. Tiền mượn: ${totalPrice.toLocaleString()} VND`
-  );
-      setBorrowedCar(null); // Cập nhật lại trạng thái của borrowedCar
-      setCars((prevCars) =>
-    prevCars.map((car) =>
-    car._id === selectedCar._id
-      ? { ...car, available: true, borrowTime: null }
-      : car
-  )
-);
 
+      const { totalPrice, rentalEnd: returnedTime } = response.data.rental;
+      setMessage(`Xe đã trả thành công vào lúc: ${new Date(returnedTime).toLocaleString()}. Tiền mượn: ${totalPrice.toLocaleString()} VND`);
+      setBorrowedCar(null);
+      setCars(cars.map(car => car._id === selectedCar._id ? { ...car, available: true, borrowTime: null } : car));
     } catch (error) {
-      console.error("Error while returning car:", error);
       setMessage(error.response?.data?.message || "Lỗi khi trả xe.");
     }
   };
-  
-  
+
+  const handleCarSelect = (car) => setSelectedCar(car);
+
   return (
-    <div style={{ display: "flex", height: "100vh", width: "100vw" }}>
-      {/* Góc trên bên phải: Đăng nhập hoặc thông tin người dùng */}
-      <div
-        style={{
-          position: "absolute",
-          top: "10px",
-          right: "10px",
-          padding: "10px",
-          backgroundColor: "#fff",
-          borderRadius: "8px",
-          boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
-        }}
-      >
-        {loggedInUser ? (
-          <div>
-            <p>Xin chào, {loggedInUser.username}</p>
-            <button onClick={handleLogout}>Đăng xuất</button>
+    <Container fluid style={{ fontSize: "14px" }}>
+      <Row sm={6}>
+        <Col sm={5}>
+          <div style={{ height: "600px", backgroundColor: "#d3d3d3", border: "2px solid #000", borderRadius: "8px" }}> {/* Tăng chiều cao bản đồ */}
+            <h4>Bản đồ</h4>
+            <MapComponent cars={cars} selectedCar={selectedCar} stations={stations} />
           </div>
-        ) : (
-          <div>
-            <input
-              type="text"
-              placeholder="Tên đăng nhập"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              style={{ marginBottom: "5px" }}
-            />
-            <br />
-            <input
-              type="password"
-              placeholder="Mật khẩu"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={{ marginBottom: "5px" }}
-            />
-            <br />
-            <button onClick={handleLogin}>Đăng nhập</button>
+        </Col>
+        <Col sm={7}> {/* Giảm kích thước phần đăng nhập xuống 8/12 */}
+            <h1 style={{ fontSize: "26px" }} className="my-4">Bike Rental Dashboard</h1>
+          <div style={{ marginBottom: "5px", fontSize: "18px", fontWeight: "bold", color:"#9966ff" }}>
+            
+             Phan Đình Tuấn - 20242239M - Project IOT
           </div>
-        )}
-      </div>
-  
-      {/* Phần bản đồ */}
-      <div style={{ flex: 1, height: "100%" }}>
-        <MapComponent cars={cars} selectedCar={selectedCar} stations={stations} />
-      </div>
-  
-      {/* Phần danh sách */}
-      <div
-        style={{
-          flex: 1,
-          height: "100%",
-          overflowY: "scroll",
-          padding: "20px",
-          borderLeft: "2px solid #ccc",
-          display: "flex",
-          flexDirection: "column",
-          gap: "20px",
-        }}
-      >
-        {/* Danh sách xe */}
-        <div>
-          <h2>Danh sách xe</h2>
-          {cars.map((car) => (
-            <div
-              key={car._id}
-              style={{
-                padding: "10px",
-                border: "1px solid #ccc",
-                marginBottom: "10px",
-                cursor: "pointer",
-                backgroundColor: car.available ? "#e0f7e0" : "#ffebee",
-              }}
-              onClick={() => {
-                handleCarSelect(car);
-                console.log("Car ID đã chọn:", car._id);
-              }}
-            >
-              <h3>
-                {car.brand} {car.model}
-              </h3>
-              <p>{car.licensePlate}</p>
-              <p
-                style={{
-                  fontWeight: "bold",
-                  color: car.available ? "green" : "red",
-                }}
-              >
-                {car.available ? "Có sẵn" : "Không có sẵn"}
-              </p>
-              {car.available ? (
-                <button onClick={handleBorrowCar}>Mượn Xe</button>
-              ) : (
-                <>
-                  <p>
-                    Đã mượn lúc:{" "}
-                    {car.borrowTime
-                      ? new Date(car.borrowTime).toLocaleString()
-                      : "---"}
-                  </p>
-                  {car.borrowedBy === loggedInUser?.id && (
-                    <button onClick={handleReturnCar}>Trả Xe</button>
-                  )}
-                </>
-              )}
-            </div>
-          ))}
-          {borrowedCar && (
-            <div>
-              <h3>Xe bạn đã mượn:</h3>
-              <p>
-                {borrowedCar.selectedCar.brand}{" "}
-                {borrowedCar.selectedCar.model}
-              </p>
-              <p>
-                Bắt đầu mượn lúc:{" "}
-                {new Date(borrowedCar.rentalStart).toLocaleString()}
-              </p>
-              <button onClick={() => handleReturnCar()}>Trả Xe</button>
+          {!loggedInUser ? (
+            <Form className="mb-4" style={{  width: "250px", margin: "0 auto", border: "2px solid #000", borderRadius: "8px", padding: "20px"  }}> {/* Giảm kích thước ô đăng nhập */}
+              <Form.Group controlId="username" className="mb-3">
+                <Form.Control type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="Username" />
+              </Form.Group>
+              <Form.Group controlId="password" className="mb-3">
+                <Form.Control type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" />
+              </Form.Group>
+              <Button onClick={handleLogin} variant="primary">Login</Button>
+            </Form>
+          ) : (
+            <div className="mb-4">
+              <h2 style={{ fontSize: "16px" }}>Welcome, {loggedInUser.username}</h2>
+              <Button onClick={handleLogout} variant="secondary">Logout</Button>
             </div>
           )}
-          {message && <p>{message}</p>}
-        </div>
   
-        {/* Danh sách trạm */}
-        <div>
-          <h2>Danh sách trạm</h2>
-          {stations.map((station) => (
-            <div
-              key={station.id}
-              style={{
-                padding: "10px",
-                border: "1px solid #ccc",
-                marginBottom: "10px",
-                cursor: "pointer",
-                backgroundColor: "#f0f8ff",
-              }}
-            >
-              <h3>{station.model}</h3>
-              <p>Địa chỉ: {station.address}</p>
-              <p>
-                Vĩ độ: {station.location.latitude}, Kinh độ:{" "}
-                {station.location.longitude}
-              </p>
-            </div>
-          ))}
-        </div>
+          {message && <Alert variant="info">{message}</Alert>}
+  
+          <Row className="gy-3">
+            {cars.map(car => (
+                          <Col sm={12} md={4} lg={3} key={car._id}> {/* Thay đổi kích thước Col để thu nhỏ các ô hiển thị xe */}
+                          <Card
+                            style={{
+                              cursor: "pointer", 
+                              borderColor: car.available ? "#198754" : "#dc3545", 
+                              border: "2px solid #000", /* Thêm viền cho Card */
+                              borderRadius: "8px", /* Thêm bo tròn cho Card */
+                              height: "150px", /* Giảm chiều cao của Card */
+                              overflow: "hidden", /* Giới hạn nội dung không vượt quá Card */
+                            }}
+                            className={`h-100 ${car.available ? "bg-light" : "bg-danger-subtle"}`}
+                            onClick={() => handleCarSelect(car)}
+                          >
+                            <Card.Body>
+                              <Card.Title style={{ fontSize: "14px" }}>{car.brand} {car.model}</Card.Title>
+                          {/*    <Card.Text><strong>Biển số:</strong> {car.licensePlate}</Card.Text> */ }
+                              <Card.Text style={{ fontSize: "12px" }} className={car.available ? "text-success fw-bold" : "text-danger fw-bold"}>
+                                {car.available ? "Có sẵn" : "Không có sẵn"}
+                              </Card.Text>
+                              {car.available ? (
+                                <Button variant="success" onClick={handleBorrowCar} className="mt-2">Mượn Xe</Button>
+                              ) : car.borrowedBy === loggedInUser?.id ? (
+                                <Button variant="danger" onClick={handleReturnCar} className="mt-2">Trả Xe</Button>
+                              ) : null}
+                            </Card.Body>
+                          </Card>
+                        </Col>
+            ))}
+          </Row>
+{/* {\*
+          {borrowedCar && (
+            <Alert variant="info" className="mt-4">
+              <h4>Xe bạn đã mượn:</h4>
+              <p><strong>Xe:</strong> {borrowedCar.selectedCar.brand} {borrowedCar.selectedCar.model}</p>
+              <p><strong>Bắt đầu mượn lúc:</strong> {new Date(borrowedCar.rentalStart).toLocaleString()}</p>
+              <Button variant="primary" onClick={handleReturnCar}>Trả Xe</Button>
+            </Alert>
+          )}
+          */}  
+          {/* Danh sách trạm */}
+      <div className="mt-4">
+        <h2 style={{ fontSize: "18px" }}>Danh sách trạm</h2>
+        {stations.map((station) => (
+          <div
+            key={station.id}
+            style={{
+              padding: "10px",
+              border: "1px solid #ccc",
+              marginBottom: "02px",
+              cursor: "pointer",
+              backgroundColor: "#f0f8ff",
+            }}
+          >
+            <h3 style={{ fontSize: "16px" }}>{station.model}</h3>
+            {/* <p>Địa chỉ: {station.address}</p> */}
+            <p>
+              Vĩ độ: {station.location.latitude}, Kinh độ:{" "}
+              {station.location.longitude}
+            </p>
+          </div>
+        ))}
       </div>
-    </div>
+        </Col>
+      </Row>
+    </Container>
   );
-  
 }
 
 export default App;
