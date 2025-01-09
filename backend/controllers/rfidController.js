@@ -22,7 +22,7 @@ exports.authenticateUserByRFID = async (req, res) => {
 
         // Trả về thông tin người dùng, carId và thời gian
         res.json({
-            message: 'Authentication successful',
+            message: 'Authentication successful RFID',
             // token,  
             userId: user._id,
             carId: carId || null,  // Thông tin xe nếu có

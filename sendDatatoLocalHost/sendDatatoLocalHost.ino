@@ -3,11 +3,11 @@
 #include <ArduinoJson.h>
 
 // Thông tin WiFi
-const char* ssid = "Thu - VNPT";        // Thay bằng SSID của mạng WiFi
-const char* password = "123456789"; // Thay bằng mật khẩu WiFi
+const char* ssid = "Tầng 6";        // Thay bằng SSID của mạng WiFi
+const char* password = "Matkhautang6"; // Thay bằng mật khẩu WiFi
 
 // Định nghĩa URL của server
-String baseServer = "http://192.168.1.7:5001"; // Cập nhật URL với server của bạn
+String baseServer = "http://192.168.0.105:5001"; // Cập nhật URL với server của bạn
 
 // Hàm khởi tạo WiFi
 void setupWiFi() {
@@ -24,15 +24,16 @@ void setupWiFi() {
 
 // Hàm setup: chạy một lần khi thiết bị khởi động
 void setup() {
-  Serial.begin(115200); // Khởi tạo Serial
+  Serial.begin(57600); // Khởi tạo Serial
   setupWiFi();          // Kết nối WiFi
+  serial.clear;
 }
 
 // Hàm loop: chạy lặp lại liên tục
 void loop() {
   // Ví dụ gửi dữ liệu RFID và carId lên server
   String rfid = "2";    // Thay bằng giá trị thực tế của RFID
-  String carId = "6777a953f8d96295d988c519";      // Thay bằng ID xe thực tế
+  String carId = "6777a953f8d96295d988c51a";      // Thay bằng ID xe thực tế
 
   sendRFIDData(rfid, carId);    // Gửi dữ liệu
   delay(5000);                 // Lặp lại mỗi 10 giây
@@ -61,7 +62,7 @@ void sendRFIDData(String rfid, String carId) {
       Serial.printf("POST Response Code: %d\n", httpCode);
       if (httpCode == HTTP_CODE_OK) {
         String payload = http.getString();
-        Serial.println("POST Response:");
+        Serial.println("POST Response RFID:");
         Serial.println(payload);
 
         // Xử lý phản hồi JSON
@@ -116,12 +117,14 @@ void sendRentCarData(String carId, String userId, String timeRent) {
   HTTPClient http;
 
   String fullUrl = String(baseServer) + "/api/rentals/rentRFID";
-
   Serial.println("Sending Rent Car POST request to: " + fullUrl);
 
   if (http.begin(client, fullUrl)) {
+  http.addHeader("Content-Type", "application/json");
 
     String jsonData = "{\"carId\": \"" + carId + "\", \"userId\": \"" + userId + "\", \"rentalStart\": \"" + timeRent + "\"}";
+ // In JSON để kiểm tra trước khi gửi
+    Serial.println("Sending JSON: " + jsonData);
 
     int httpCode = http.POST(jsonData);
 
@@ -129,7 +132,7 @@ void sendRentCarData(String carId, String userId, String timeRent) {
       Serial.printf("POST Response Code: %d\n", httpCode);
       if (httpCode == HTTP_CODE_OK) {
         String payload = http.getString();
-        Serial.println("POST Response:");
+        Serial.println("POST Response Rentals:");
         Serial.println(payload);
       }
     } else {

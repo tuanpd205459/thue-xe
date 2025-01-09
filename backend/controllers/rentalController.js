@@ -79,12 +79,12 @@ exports.rentCarRFID = async (req, res) => {
     );
 
     if (!car_update) {
-      return res.status(404).json({ message: 'Car not found or already rented' });
+      return res.status(404).json({ message: 'Car not found or already rented - RFID' });
     }
 
-    res.status(201).json({ message: 'Car rented successfully', rental });
+    res.status(201).json({ message: 'Car rented successfully - RFID', rental });
   } catch (err) {
-    res.status(500).json({ message: 'Error renting car', error: err.message });
+    res.status(500).json({ message: 'Error renting car RFID', error: err.message });
   }
 };
 
