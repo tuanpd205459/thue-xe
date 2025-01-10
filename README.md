@@ -1,2 +1,2 @@
-# thue-xe
-hoàn thành backend
+# Hệ thống thuê xe ứng dụng IOT
+Project cuối kì môn IOT - HUST
